@@ -10,12 +10,11 @@ const app = new Hono<{
   };
 }>();
 
-app.post("/api/v1/signup", async (c) => {
+app.post("/api/v1/user/signup", async (c) => {
+  const body = await c.req.json();
   const prisma = new PrismaClient({
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
-
-  const body = await c.req.json();
 
   try {
     const user = await prisma.user.create({
@@ -26,35 +25,38 @@ app.post("/api/v1/signup", async (c) => {
       },
     });
     //@ts-ignore
-    const token = await sign({ id: user.id }, c.env.JWT_SECRET);
-
-    return c.json({
-      jwt: token,
-    });
+    const jwt = await sign({ id: user.id }, c.env.JWT_SECRET);
+    return c.text(jwt);
   } catch (e) {
-    return c.status(403);
+    c.status(411);
+    return c.text('Invalid');
   }
 });
-app.post("/api/v1/signin", async (c) => {
+app.post("/api/v1/user/signin", async (c) => {
+  const body = await c.req.json();
   const prisma = new PrismaClient({
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
 
-  const body = await c.req.json();
-  const user = await prisma.user.findUnique({
-    where: {
-      username: body.username,
-      password: body.password
-    },
-  });
-
-  if (!user) {
-    c.status(403);
-    return c.json({ error: "user not found" });
+  try{
+    const user = await prisma.user.findUnique({
+      where: {
+        username: body.username,
+        password: body.password
+      },
+    });
+    if (!user) {
+      c.status(403); //unauthorized
+      return c.json({ error: "user not found" });
+    }
+    //@ts-ignore
+    const jwt = await sign({ id: user.id }, c.env.JWT_SECRET);
+    return c.json({ jwt });
+  } catch(e){
+    console.log(e);
+    c.status(500);
+    return c.json({ error: "server error" });
   }
-  //@ts-ignore
-  const jwt = await sign({ id: user.id }, c.env.JWT_SECRET);
-  return c.json({ jwt });
 });
 
 app.post("/api/v1/blog", (c) => {
