@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
-import { decode, sign, verify } from "hono/jwt";
-import { signupInput } from "../zod";
+import { sign } from "hono/jwt";
+import { signinInput, signupInput } from "@styaprakash/nexus-common";
 
 export const userRouter = new Hono<{
     Bindings: {
@@ -42,6 +42,7 @@ userRouter.post("/signup", async (c) => {
   //SIGN-IN
   userRouter.post("/api/v1/user/signin", async (c) => {
     const body = await c.req.json();
+    const { success } = signinInput.safeParse(body);
     const prisma = new PrismaClient({
       datasourceUrl: c.env?.DATABASE_URL,
     }).$extends(withAccelerate());

@@ -1,6 +1,7 @@
 // Import necessary modules
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
+import { createBlogInput, updateBlogInput } from "@styaprakash/nexus-common";
 import { Hono } from "hono";
 import { verify } from "hono/jwt";
 
@@ -40,6 +41,11 @@ blogRouter.use("/*", async (c, next) => {
 // POST request to create a new blog post
 blogRouter.post("/", async (c) => {
   const body = await c.req.json();
+  const { success } = createBlogInput.safeParse(body);
+  if (!success) {
+      c.status(411);
+      return c.json({ error: "Invalid inputs" });
+  }
   const authorId = c.get("userId");
   const prisma = new PrismaClient({
     datasourceUrl: c.env?.DATABASE_URL,
@@ -59,6 +65,11 @@ blogRouter.post("/", async (c) => {
 // PUT request to update an existing blog post
 blogRouter.put("/", async (c) => {
   const body = await c.req.json();
+  const { success } = updateBlogInput.safeParse(body);
+  if (!success) {
+      c.status(411);
+      return c.json({ error: "Invalid inputs" });
+  }
   const prisma = new PrismaClient({
     datasourceUrl: c.env?.DATABASE_URL,
   }).$extends(withAccelerate());
