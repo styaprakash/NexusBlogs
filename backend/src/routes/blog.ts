@@ -4,7 +4,7 @@ import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
 import { verify } from "hono/jwt";
 
-// Create a new Hono router with type bindings for DATABASE_URL and JWT_SECRET
+// Create a new Hono router with type bindings for DATABASE_URL and JWT_SECRET and userID in Variables
 export const blogRouter = new Hono<{
   Bindings: {
     DATABASE_URL: string;
@@ -18,14 +18,21 @@ export const blogRouter = new Hono<{
 // Use a middleware function to handle all requests
 blogRouter.use("/*", async (c, next) => {
   const authHeader = c.req.header("authorization") || "";
-  const user = await verify(authHeader, c.env.JWT_SECRET);
-  if (user) {
-    c.set("userId", user.id as string);
-    await next();
-  } else {
-    c.status(403);
+  try {
+    const user = await verify(authHeader, c.env.JWT_SECRET);
+    if (user) {
+      c.set("userId", user.id as string);
+      await next();
+    } else {
+      c.status(403);
+      return c.json({
+        message: "You are not logged in"
+      });
+    }
+  }catch(e){
+    c.status(401);
     return c.json({
-      message: "You are not logged in",
+      message: "You are not logged in"
     });
   }
 });
